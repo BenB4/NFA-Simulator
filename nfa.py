@@ -93,9 +93,9 @@ class NFA:
     #explanation:
     #simulates every possible path on the nfa and returns the results of all paths in a list.
     #return the result of a reduce with or that checks if any one of those paths accepts.
-    def simulate(self, current, string):
-        #kills path if no transition rule for previous symbol
-        if current == None:
+    def simulate(self, current, string, empty_cycle=set()):
+        #kills path if no transition rule for previous symbol or path is @ cycle.
+        if current == None or current in empty_cycle:
             return False
         if not string:
             return current.is_final()
@@ -103,7 +103,10 @@ class NFA:
         next_results = [self.simulate(s, string[1:]) for s in next_states]
         #always try and use empty string
         empty_next = current.read_symbol('@')
-        empty_results = [self.simulate(s, string) for s in empty_next]
+        #keep track of states visited with @. Prevents infinite recursion bc of @ cycles.
+        new_empty_cycle = empty_cycle.copy()
+        new_empty_cycle.add(current)
+        empty_results = [self.simulate(s, string, new_empty_cycle) for s in empty_next]
         #returns (reduced results from trying next symbol) or (reduced results from trying empty string)
         return ft.reduce(lambda a, b: a or b, next_results) or ft.reduce(lambda a, b: a or b, empty_results)
 
