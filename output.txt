@@ -1,7 +1,11 @@
 accept
 reject
-accept
-accept
 reject
 accept
+reject
+reject
+reject
+reject
+accept
+reject
 accept
