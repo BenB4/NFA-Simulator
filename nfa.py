@@ -1,5 +1,3 @@
-import functools as ft
-
 class State:
     def __init__(self, name) -> None:
         self.name = name
@@ -41,6 +39,7 @@ class NFA:
         self.states = {}
         self.alphabet = set()
         self.start = None
+        self.accepts = False
         self.new()
 
     #creates a new NFA as specified by input NFA file.
@@ -48,6 +47,7 @@ class NFA:
         self.states = {}
         self.alphabet = set()
         self.start = None
+        self.accepts = False
         with open(nfa_file_name) as nfa_file:
             #read states
             state_name_list = nfa_file.readline().rstrip().split(',')
@@ -81,8 +81,10 @@ class NFA:
         with open(input_file_name) as input_file:
             with open(output_file_name, 'w') as out:
                 for string in input_file:
-                    result = self.simulate(self.start, string.rstrip())
-                    if result:
+                    self.accepts = False
+                    #sim function
+                    self.simulate(self.start, string.rstrip())
+                    if self.accepts:
                         out.write('accept\n')
                     else:
                         out.write('reject\n')
@@ -90,32 +92,25 @@ class NFA:
             input_file.close()
 
 
-    #recursively simulate string on NFA start state
+    #recursively simulate string on NFA
     def simulate(self, current, string, empty_cycle=set()):
         #kills path if no transition rule for previous symbol or path is @ cycle.
-        if current == None or current in empty_cycle:
-            return False
+        if current == None or current in empty_cycle: return
 
-        #always try and use @
-        #must do before check if input string is empty
+        #if in valid state and not in cycle try and read @. Keep track of states visited to prevent cycles.
         empty_next = current.read_symbol('@')
-        #keep track of states visited with @. Prevents infinite recursion bc of @ cycles.
         new_empty_cycle = empty_cycle.copy()
         new_empty_cycle.add(current)
-        #do not modify input string when simulating with @
-        empty_results = [self.simulate(s, string, new_empty_cycle) for s in empty_next]
-        #determine if any path with @ only is valid
-        empty_reduced = ft.reduce(lambda a, b: a or b, empty_results)
+        for s in empty_next: self.simulate(s, string, new_empty_cycle)
 
-        #if input string is empty return if current state is final or final can be reached with @ (determined above)
+        #if input string is empty and current state is accept state set accepts var to true
         if not string:
-            return current.is_final() or empty_reduced
+            if current.is_final() and not self.accepts: self.accepts = True
+            return
 
         #if input string not empty read leading character and check if any path from it is valid
         next_states = current.read_symbol(string[0])
-        next_results = [self.simulate(s, string[1:]) for s in next_states]
-        #returns (reduced results from trying next symbol) or (reduced results from trying empty string)
-        return ft.reduce(lambda a, b: a or b, next_results) or empty_reduced
+        for s in next_states: self.simulate(s, string[1:])
 
 
     def __str__(self) -> str:
